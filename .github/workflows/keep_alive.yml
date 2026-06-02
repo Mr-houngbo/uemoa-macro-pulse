@@ -1,0 +1,36 @@
+name: Supabase Keep-Alive Bot
+
+# Définition du calendrier d'exécution (Cron)
+on:
+  schedule:
+    # S'exécute à 06:00 UTC les jours 1, 3, 5, 0 (Lundi, Mercredi, Vendredi, Dimanche)
+    - cron: '0 6 * * 1,3,5,0'
+  workflow_dispatch: # Permet aussi de lancer le script manuellement depuis l'interface GitHub
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Récupérer le code du dépôt
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # 2. Installer Python sur la machine virtuelle de GitHub
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    # 3. Installer les bibliothèques requises
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests python-dotenv
+
+    # 4. Exécuter le script en lui injectant les clés secrètes du coffre GitHub
+    - name: Run Keep-Alive Script
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: python keep_alive.py
