@@ -128,15 +128,28 @@ elif page == "📥 Ingestion Documentaire":
                     if not texte_extrait:
                         st.error("Impossible de lire le texte de ce PDF. Est-ce un PDF scanné (image) ?")
                         st.stop()
+                    
+                    # Affichage du texte extrait pour vérification
+                    st.subheader("📄 Texte extrait du PDF :")
+                    with st.expander("Voir le texte extrait (cliquer pour déplier)"):
+                        st.text_area("Texte brut extrait", texte_extrait, height=300)
                         
                     # Étape A : On envoie le texte extrait au parser
                     donnees_triees = extraire_donnees_resume(texte_extrait, date_bulletin=date_bulletin.isoformat())
                     
-                    # Étape B : Injection dans les tables de Supabase
-                    alimenter_base_de_donnees(donnees_triees)
+                    # Affichage des données parsées pour vérification
+                    st.subheader("🔍 Données extraites et structurées :")
+                    import json
+                    with st.expander("Voir les données parsées (cliquer pour déplier)"):
+                        st.json(donnees_triees)
                     
-                    st.success("🎉 Le PDF a été lu avec succès ! Les indicateurs sont dans ton Cloud.")
-                    st.balloons()
+                    # Confirmation avant injection
+                    if st.button("✅ Confirmer et injecter dans Supabase", type="primary"):
+                        # Étape B : Injection dans les tables de Supabase
+                        alimenter_base_de_donnees(donnees_triees)
+                        
+                        st.success("🎉 Le PDF a été lu avec succès ! Les indicateurs sont dans ton Cloud.")
+                        st.balloons()
                     
                 except Exception as e:
                     st.error(f"Une erreur est survenue pendant le traitement du PDF : {e}")
