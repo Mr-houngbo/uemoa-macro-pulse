@@ -97,37 +97,47 @@ if page == "📈 Dashboard Investisseur":
             st.info("Ces métriques seront extraites des sections approfondies du bulletin lors du prochain sprint.")
 
 # =========================================================================
-# PAGE 2 : INGESTION DOCUMENTAIRE (TON MODULE DE TÉLÉVERSEMENT)
+# PAGE 2 : INGESTION DOCUMENTAIRE (VERSION VRAI PDF)
 # =========================================================================
 elif page == "📥 Ingestion Documentaire":
-    st.title("📥 Centre d'Ingestion Autopilot")
-    st.write("Ajoute un nouveau rapport mensuel de la BCEAO pour mettre à jour tes graphiques instantanément.")
+    st.title("📥 Centre d'Ingestion Autopilot - PDF")
+    st.write("Télécharge le bulletin mensuel sur le site de la BCEAO et glisse-le ici.")
     
-    st.warning("⚠️ Pour le moment, cette interface simule l'extraction depuis le texte du résumé. Au Sprint 5, elle lira directement ton vrai fichier PDF.")
+    import pdfplumber
 
     # 1. Sélection de la date du rapport
-    date_bulletin = st.date_input("Date d'application du bulletin (En général le 1er du mois)", datetime(2026, 3, 1))
+    date_bulletin = st.date_input("Date d'application du bulletin", datetime(2026, 3, 1))
     
-    # 2. Zone de texte ou téléversement
-    st.markdown("### Copie le texte du Résumé officiel ci-dessous :")
-    texte_bceao = st.text_area("Texte du Bulletin", height=250, placeholder="Colle le paragraphe du résumé ici...")
+    # 2. Zone de téléversement du fichier PDF
+    fichier_pdf = st.file_uploader("Choisir le bulletin officiel BCEAO (Format .pdf)", type=["pdf"])
     
     # 3. Bouton d'action
-    if st.button("🚀 Lancer l'Analyse et l'Ingestion", use_container_width=True):
-        if not texte_bceao.strip():
-            st.error("Veuillez coller du texte avant de lancer l'analyse.")
+    if st.button("🚀 Extraire le PDF et Injecter dans Supabase", use_container_width=True):
+        if fichier_pdf is None:
+            st.error("Veuillez d'abord glisser un fichier PDF.")
         else:
-            with st.spinner("🤖 L'IA analyse le texte, extrait les indicateurs et met à jour Supabase..."):
+            with st.spinner("🤖 Extraction du texte du PDF en cours..."):
                 try:
-                    # Étape A : Parsing
-                    donnees_triees = extraire_donnees_resume(texte_bceao, date_bulletin=date_bulletin.isoformat())
+                    # Lecture du PDF en mémoire vive
+                    texte_extrait = ""
+                    with pdfplumber.open(fichier_pdf) as pdf:
+                        # On extrait le texte des premières pages (généralement là où est le résumé)
+                        for page_pdf in pdf.pages[:3]:  # On lit les 3 premières pages
+                            texte_extrait += page_pdf.extract_text() or ""
                     
-                    # Étape B : Injection
+                    if not texte_extrait:
+                        st.error("Impossible de lire le texte de ce PDF. Est-ce un PDF scanné (image) ?")
+                        st.stop()
+                        
+                    # Étape A : On envoie le texte extrait au parser
+                    donnees_triees = extraire_donnees_resume(texte_extrait, date_bulletin=date_bulletin.isoformat())
+                    
+                    # Étape B : Injection dans les tables de Supabase
                     alimenter_base_de_donnees(donnees_triees)
                     
-                    st.success("🎉 Données extraites et injectées avec succès dans ton Cloud ! Retourne sur le Dashboard pour voir le résultat.")
-                    st.balloons() # Petite animation de célébration
+                    st.success("🎉 Le PDF a été lu avec succès ! Les indicateurs sont dans ton Cloud.")
+                    st.balloons()
                     
                 except Exception as e:
-                    st.error(f"Une erreur est survenue pendant le traitement : {e}")
+                    st.error(f"Une erreur est survenue pendant le traitement du PDF : {e}")
 
