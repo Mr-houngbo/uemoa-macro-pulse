@@ -118,12 +118,15 @@ elif page == "📥 Ingestion Documentaire":
         else:
             with st.spinner("🤖 Extraction du texte du PDF en cours..."):
                 try:
-                    # Lecture du PDF en mémoire vive
+                    # Nouvelle version robuste : Lecture élargie des 10 premières pages
                     texte_extrait = ""
                     with pdfplumber.open(fichier_pdf) as pdf:
-                        # On extrait le texte des premières pages (généralement là où est le résumé)
-                        for page_pdf in pdf.pages[:3]:  # On lit les 3 premières pages
-                            texte_extrait += page_pdf.extract_text() or ""
+                        # On prend les 10 premières pages (ou le max disponible si le PDF est plus court)
+                        max_pages = min(10, len(pdf.pages))
+                        for i in range(max_pages):
+                            page_text = pdf.pages[i].extract_text()
+                            if page_text:
+                                texte_extrait += f"\n--- PAGE {i+1} ---\n" + page_text
                     
                     if not texte_extrait:
                         st.error("Impossible de lire le texte de ce PDF. Est-ce un PDF scanné (image) ?")
